@@ -84,7 +84,9 @@
   function renderDocx() {
     $('docxDrop').classList.remove('has-error');
     $('docxDrop').classList.toggle('filled', !!state.docx);
-    $('docxName').textContent = state.docx ? state.docx.name + ' · ' + formatBytes(state.docx.bytes.length) : 'Optional. Goes into the ZIP for buyers who edit in Word.';
+    $('docxName').textContent = state.docx
+      ? state.docx.name + ' · ' + formatBytes(state.docx.bytes.length) + (state.docx.fromLink ? ' · from your Google link' : '')
+      : 'Optional. Goes into the ZIP for buyers who edit in Word.';
     $('docxClear').hidden = !state.docx;
   }
 
@@ -97,7 +99,8 @@
     $('pdfDrop').classList.remove('has-error');
     $('pdfDrop').classList.add('filled');
     var p = state.pdf;
-    $('pdfName').textContent = p.sample ? 'Sample worksheet loaded. Drop your own PDF here to replace it.' : p.name + ' · ' + formatBytes(p.bytes.length);
+    $('pdfName').textContent = p.sample ? 'Sample worksheet loaded. Paste your Google link above or drop a PDF here.'
+      : p.name + ' · ' + formatBytes(p.bytes.length) + (p.fromLink ? ' · from your Google link' : '');
     $('sampleTag').hidden = !p.sample;
   }
 
@@ -124,6 +127,73 @@
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
     return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  // ---------- Import from a Google link ----------
+
+  var importing = false;
+
+  function importStatus(text, level) {
+    var box = $('importStatus');
+    box.hidden = !text;
+    box.textContent = text || '';
+    box.className = 'import-status' + (level ? ' ' + level : '');
+  }
+
+  async function fetchExport(file, format) {
+    var url = 'api/google-export?kind=' + encodeURIComponent(file.kind) + '&id=' + encodeURIComponent(file.id) + '&format=' + format;
+    var res;
+    try {
+      res = await fetch(url, { cache: 'no-store' });
+    } catch (e) {
+      throw new Error(NO_SERVER);
+    }
+    var type = (res.headers.get('content-type') || '').toLowerCase();
+    if (type.indexOf('application/json') === 0) {
+      var err = await res.json().catch(function () { return {}; });
+      throw new Error(err.message || 'Google could not send this file.');
+    }
+    if (!res.ok || type.indexOf('text/html') === 0) throw new Error(NO_SERVER);
+    var bytes = new Uint8Array(await res.arrayBuffer());
+    return { bytes: bytes, name: core.fileNameFromDisposition(res.headers.get('content-disposition')) };
+  }
+
+  var NO_SERVER = 'Importing from a link only works on the published TPT Packager site. Here, download the file from Google (File → Download → PDF) and drop it below.';
+
+  async function importFromGoogle() {
+    var link = $('googleLink').value.trim();
+    var file = core.parseGoogleFileLink(link);
+    if (!file || (file.kind !== 'document' && file.kind !== 'presentation')) {
+      importStatus('Paste a link to a Google Doc or Google Slides file. For Sheets or Canva, download a PDF and drop it below.', 'danger');
+      return;
+    }
+    if (importing) return;
+    importing = true;
+    $('importBtn').disabled = true;
+    importStatus('Getting the file from Google…');
+    try {
+      var pdfJob = fetchExport(file, 'pdf');
+      var docxJob = file.kind === 'document' ? fetchExport(file, 'docx').catch(function () { return null; }) : Promise.resolve(null);
+      var pdf = await pdfJob;
+      if (!isPdf(pdf.bytes)) throw new Error('Google sent something that is not a PDF. Try again, or download the PDF and drop it below.');
+      var docx = await docxJob;
+      var title = core.cleanFileName(pdf.name || 'Google ' + (file.kind === 'document' ? 'Doc' : 'Slides'));
+      state.pdf = { name: title + '.pdf', bytes: pdf.bytes, sample: false, fromLink: true };
+      state.docx = docx ? { name: title + '.docx', bytes: docx.bytes, fromLink: true } : (state.docx && !state.docx.fromLink ? state.docx : null);
+      $('productName').value = title;
+      renderDocx();
+      importStatus('Got "' + title + '" from Google: a PDF' + (docx ? ' and an editable Word file' : '') + '.', 'ok');
+      await afterPdfChange();
+    } catch (e) {
+      importStatus(e.message || String(e), 'danger');
+    } finally {
+      importing = false;
+      $('importBtn').disabled = false;
+    }
+  }
+
+  function isPdf(bytes) {
+    return bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
   }
 
   // ---------- Print check ----------
@@ -248,8 +318,9 @@
     var linkOk = !link || !!core.forceCopyUrl(link);
     $('googleLinkHint').classList.toggle('danger', !linkOk);
     $('googleLinkHint').textContent = linkOk
-      ? (link ? 'Buyers get: ' + core.forceCopyUrl(link) : 'Optional. Paste the link to your Google Doc, Slides or Sheets file.')
-      : 'That doesn\'t look like a Google Docs, Slides or Sheets link. Open the file and copy the address from the browser bar.';
+      ? 'Share the file first: Share → General access → Anyone with the link (Viewer). Then copy the address from your browser bar.'
+      : 'That doesn\'t look like a Google Docs or Slides link. Open the file and copy the address from the browser bar.';
+    $('giveCopyLink').disabled = !link || !linkOk;
   }
 
   function clearResult() {
@@ -272,7 +343,7 @@
         docx: state.docx,
         productName: $('productName').value || state.pdf.name,
         settings: readSettings(),
-        googleLink: $('googleLink').value.trim(),
+        googleLink: $('giveCopyLink').checked ? $('googleLink').value.trim() : '',
         previewPages: Number($('previewPages').value) || 0,
         outputs: outputs
       });
@@ -417,7 +488,14 @@
     renderDocx();
     $('docxClear').addEventListener('click', function () { state.docx = null; renderDocx(); clearResult(); });
     $('build').addEventListener('click', build);
-    $('googleLink').addEventListener('input', function () { updateBuildState(); clearResult(); });
+    $('googleLink').addEventListener('input', function () { updateBuildState(); clearResult(); importStatus(''); });
+    $('googleLink').addEventListener('paste', function () {
+      // Fetch as soon as a link is pasted; the button is there to retry.
+      setTimeout(function () { if (core.forceCopyUrl($('googleLink').value)) importFromGoogle(); }, 0);
+    });
+    $('googleLink').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); importFromGoogle(); } });
+    $('importBtn').addEventListener('click', importFromGoogle);
+    $('giveCopyLink').addEventListener('change', clearResult);
     $('pageSize').addEventListener('change', function () { if (state.check) renderCheck(); clearResult(); saveSettings(); });
     ['shopName', 'storeUrl', 'thankYou', 'terms'].forEach(function (f) {
       $(f).addEventListener('change', function () { saveSettings(); clearResult(); });

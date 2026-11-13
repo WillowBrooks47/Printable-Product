@@ -4,7 +4,7 @@
   "private": true,
   "description": "Website that turns a finished printable PDF into a TPT-ready bundle: print-ready PDF, watermarked preview, Read Me First page and upload ZIP.",
   "scripts": {
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/*.test.js test/*.test.mjs",
     "start": "python3 -m http.server 8080 --directory site",
     "deploy": "wrangler deploy"
   },

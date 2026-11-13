@@ -86,6 +86,15 @@
     return 'https://docs.google.com/' + f.kind + '/d/' + f.id + '/copy';
   }
 
+  /** File name from a Content-Disposition header (prefers the UTF-8 form). */
+  function fileNameFromDisposition(header) {
+    var h = String(header || '');
+    var m = h.match(/filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/);
+    if (m) { try { return decodeURIComponent(m[1].trim().replace(/^"|"$/g, '')); } catch (e) { /* fall through */ } }
+    m = h.match(/filename\s*=\s*"([^"]*)"/) || h.match(/filename\s*=\s*([^;]+)/);
+    return m ? m[1].trim() : '';
+  }
+
   function stamp(date) {
     var d = date || new Date();
     function p(n) { return (n < 10 ? '0' : '') + n; }
@@ -261,6 +270,7 @@
     cleanFileName: cleanFileName,
     parseGoogleFileLink: parseGoogleFileLink,
     forceCopyUrl: forceCopyUrl,
+    fileNameFromDisposition: fileNameFromDisposition,
     stamp: stamp,
     defaultTerms: defaultTerms,
     mergeSettings: mergeSettings,

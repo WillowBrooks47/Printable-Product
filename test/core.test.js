@@ -84,3 +84,9 @@ test('pageList collapses ranges', () => {
   assert.equal(u.pageList([1, 2, 3, 5]), 'pages 1–3, 5');
   assert.equal(u.pageList([4]), 'page 4');
 });
+
+test('fileNameFromDisposition reads plain and UTF-8 names', () => {
+  assert.equal(u.fileNameFromDisposition('attachment; filename="Fractions.pdf"'), 'Fractions.pdf');
+  assert.equal(u.fileNameFromDisposition(`attachment; filename="Fr_ctions.pdf"; filename*=UTF-8''Fr%C3%A1ctions%20%E2%80%93%20Gr%203.pdf`), 'Fráctions – Gr 3.pdf');
+  assert.equal(u.fileNameFromDisposition(''), '');
+});

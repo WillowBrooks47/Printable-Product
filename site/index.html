@@ -110,6 +110,11 @@
   .drop .sub { font-size: .875rem; color: var(--muted); overflow-wrap: anywhere; }
   .drop.has-error .sub { color: var(--danger); }
   .tag { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: var(--info-soft); color: var(--info); margin-left: 6px; vertical-align: 2px; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .8rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .import-status { margin-top: 10px; padding: 9px 12px; border-radius: 7px; font-size: .9rem; background: var(--info-soft); }
+  .import-status.ok { background: var(--accent-soft); }
+  .import-status.danger { background: var(--warn-soft); color: var(--danger); }
   .linkbtn { position: relative; z-index: 1; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: .85rem; cursor: pointer; text-decoration: underline; }
 
   details.shop summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; align-items: center; }
@@ -195,7 +200,7 @@
     <p class="lede">Turn a finished printable into everything a Teachers Pay Teachers listing needs: a print-ready PDF, a watermarked preview, a Read Me First page with your terms of use, and one ZIP to upload.</p>
     <p class="private">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      Your files stay on this device. Nothing is uploaded.
+      Nothing is stored. Files you drop in never leave this device.
     </p>
   </header>
 
@@ -205,12 +210,26 @@
         <div class="panel-head"><span class="step">1</span><h2>Add your product</h2></div>
         <div class="stack">
           <div>
+            <label for="googleLink">Google Docs or Slides link</label>
+            <div class="copyrow">
+              <input type="url" id="googleLink" placeholder="https://docs.google.com/document/d/…/edit" autocomplete="off">
+              <button type="button" class="btn" id="importBtn">Get file</button>
+            </div>
+            <div class="hint" id="googleLinkHint"></div>
+            <div class="import-status" id="importStatus" role="status" hidden></div>
+            <div class="checkrow" style="margin-top:12px">
+              <input type="checkbox" id="giveCopyLink" checked>
+              <div><label for="giveCopyLink">Give buyers a "make a copy" link to this file</label><div class="hint">Printed on the Read Me First page, so each buyer edits their own copy.</div></div>
+            </div>
+          </div>
+          <div class="or" aria-hidden="true"><span>or upload the files</span></div>
+          <div>
             <span class="label">Printable PDF</span>
             <div class="drop" id="pdfDrop">
               <svg class="icon" viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h19l9 9v27H3z"/><path d="M22 3v9h9"/><path d="M9 22h16M9 28h16M9 34h10"/></svg>
               <div>
                 <strong>Drop your PDF here or click to choose<span class="tag" id="sampleTag" hidden>Sample</span></strong>
-                <span class="sub" id="pdfName">In Google Docs: File → Download → PDF document</span>
+                <span class="sub" id="pdfName">From Canva, Word or anywhere else that saves a PDF</span>
               </div>
               <input type="file" id="pdfInput" accept="application/pdf,.pdf" aria-label="Choose your printable PDF">
             </div>
@@ -226,12 +245,6 @@
               </div>
               <input type="file" id="docxInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Choose your editable Word file">
             </div>
-          </div>
-          <div>
-            <label for="googleLink">Google Docs link for buyers</label>
-            <input type="url" id="googleLink" placeholder="https://docs.google.com/document/d/…/edit" autocomplete="off">
-            <div class="hint" id="googleLinkHint"></div>
-            <div class="hint">Set the file's sharing to <em>Anyone with the link · Viewer</em> first. Buyers get a "make a copy" link, so each one edits their own version.</div>
           </div>
         </div>
       </section>
