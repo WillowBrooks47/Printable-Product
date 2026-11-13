@@ -28,8 +28,9 @@ site/              the website, deployed as-is (no build step)
   app.js           page logic: file inputs, print check, downloads
   lib/core.js      pure helpers (page sizes, wrapping, findings)
   lib/packager.js  builds the PDFs and ZIP with pdf-lib and JSZip
-  _headers         security headers for Cloudflare Pages
+  _headers         security headers Cloudflare adds to every page
 test/              Node tests for lib/
+wrangler.jsonc     tells Cloudflare to serve site/
 ```
 
 PDF libraries load from cdnjs: pdf-lib 1.17.1, JSZip 3.10.1 and PDF.js 3.11.174.
@@ -44,14 +45,17 @@ npm start
 
 Then open http://localhost:8080.
 
-## Deploy to Cloudflare Pages
+## Put it on Cloudflare
 
-**From the dashboard:** Workers & Pages → Create → Pages → Connect to Git → pick this repository. Leave the build command empty and set the build output directory to `site`.
+This works the same way as Story Live: Cloudflare watches this GitHub repository and redeploys whenever the main branch changes. `wrangler.jsonc` tells Cloudflare to serve the `site/` folder.
 
-**From the command line:**
+1. In Cloudflare, open **Workers & Pages → Create → Import a repository**.
+2. Pick **WillowBrooks47/Printable-Product**. If it isn't listed, choose **Manage GitHub access** and allow Cloudflare to see it.
+3. Keep the project name **tpt-packager**, the same as `"name"` in `wrangler.jsonc`. Leave the build command empty and keep the deploy command `npx wrangler deploy`.
+4. Click **Deploy**.
 
-```bash
-npx wrangler pages deploy site --project-name tpt-packager
-```
+After about a minute the site is live at **https://tpt-packager.willowbrooks47.workers.dev**.
 
-Either way the site is served at `https://tpt-packager.pages.dev`, and a custom domain can be added under the project's **Custom domains** tab.
+## Updating later
+
+Commit changes to the main branch on GitHub, either by uploading files or by merging a pull request. Cloudflare rebuilds and deploys automatically in about a minute.

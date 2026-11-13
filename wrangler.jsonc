@@ -1,0 +1,8 @@
+// TPT Packager on Cloudflare. Cloudflare reads this file when it deploys the project.
+{
+  "name": "tpt-packager",
+  "compatibility_date": "2025-09-01",
+  // The whole app is static files in site/, served from Cloudflare's edge.
+  // There is no server code: PDFs are built in the visitor's browser.
+  "assets": { "directory": "./site" }
+}
