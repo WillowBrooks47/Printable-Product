@@ -1,0 +1,363 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TPT Packager</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Turn a finished printable into everything a Teachers Pay Teachers listing needs: print-ready PDF, watermarked preview, Read Me page and upload ZIP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<style>
+  /* Layout: a two-column workbench. Inputs on the left as numbered steps, the live print check and finished files on the right. */
+  :root {
+    --bg: #f5f6f3;
+    --surface: #ffffff;
+    --ink: #1c2230;
+    --muted: #5d6573;
+    --line: #dcdfd8;
+    --accent: #2b6a4e;      /* chalkboard green */
+    --accent-ink: #ffffff;
+    --accent-soft: #e3efe8;
+    --warn: #8f5200;
+    --warn-soft: #fbefdc;
+    --danger: #b3261e;
+    --ok: #2b6a4e;
+    --info: #2f5b8a;
+    --info-soft: #e5edf6;
+    --paper-shadow: 0 1px 2px rgba(28, 34, 48, .08), 0 4px 14px rgba(28, 34, 48, .06);
+    --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14181f; --surface: #1c222b; --ink: #e8ebe6; --muted: #a2a9b4; --line: #313946;
+      --accent: #6cc59a; --accent-ink: #0f1a14; --accent-soft: #1f3a2d;
+      --warn: #f0b860; --warn-soft: #3a2d17; --danger: #ff8a80; --ok: #6cc59a; --info: #8fb8e6; --info-soft: #1d2b3c;
+      --paper-shadow: 0 1px 2px rgba(0, 0, 0, .4); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181f; --surface: #1c222b; --ink: #e8ebe6; --muted: #a2a9b4; --line: #313946;
+    --accent: #6cc59a; --accent-ink: #0f1a14; --accent-soft: #1f3a2d;
+    --warn: #f0b860; --warn-soft: #3a2d17; --danger: #ff8a80; --ok: #6cc59a; --info: #8fb8e6; --info-soft: #1d2b3c;
+    --paper-shadow: 0 1px 2px rgba(0, 0, 0, .4); color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 var(--font-body);
+  }
+  .wrap {
+    max-width: 1180px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+
+  header.top { padding-block: 28px 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .mark {
+    width: 40px; height: 40px; flex: none; border-radius: 9px; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center;
+  }
+  h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.01em; }
+  .lede { margin: 10px 0 0; max-width: 62ch; color: var(--muted); }
+  .private { display: inline-flex; gap: 6px; align-items: center; margin-top: 10px; font-size: .875rem; color: var(--ok); }
+
+  main.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 24px; padding-block: 8px 48px; align-items: start; }
+  @media (max-width: 860px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; min-width: 0; }
+  .panel-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .step {
+    flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent);
+    display: grid; place-items: center; font: 700 .85rem/1 var(--font-display); transform: translateY(-2px);
+  }
+  h2 { font-size: 1.2rem; font-weight: 600; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  label, .label { display: block; font-weight: 700; font-size: .9rem; margin-bottom: 5px; }
+  .hint { font-size: .85rem; color: var(--muted); margin-top: 5px; overflow-wrap: anywhere; }
+  .hint.danger { color: var(--danger); }
+  input[type=text], input[type=url], select, textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px;
+    background: var(--bg); color: var(--ink); font: inherit; font-size: .95rem;
+  }
+  textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible, .drop:focus-within {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+
+  .drop {
+    position: relative; display: flex; gap: 14px; align-items: center; padding: 16px;
+    border: 1.5px dashed var(--line); border-radius: 9px; background: var(--bg); cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.dragging { border-color: var(--accent); background: var(--accent-soft); }
+  .drop.filled { border-style: solid; }
+  .drop.has-error { border-color: var(--danger); }
+  .drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .drop .icon { flex: none; width: 34px; height: 42px; color: var(--accent); }
+  .drop strong { display: block; }
+  .drop .sub { font-size: .875rem; color: var(--muted); overflow-wrap: anywhere; }
+  .drop.has-error .sub { color: var(--danger); }
+  .tag { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: var(--info-soft); color: var(--info); margin-left: 6px; vertical-align: 2px; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .8rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .import-status { margin-top: 10px; padding: 9px 12px; border-radius: 7px; font-size: .9rem; background: var(--info-soft); }
+  .import-status.ok { background: var(--accent-soft); }
+  .import-status.danger { background: var(--warn-soft); color: var(--danger); }
+  .linkbtn { position: relative; z-index: 1; background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: .85rem; cursor: pointer; text-decoration: underline; }
+
+  details.shop summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details.shop summary::-webkit-details-marker { display: none; }
+  details.shop summary::after { content: "Edit"; font-weight: 400; color: var(--accent); font-size: .9rem; }
+  details.shop[open] summary::after { content: "Done"; }
+  details.shop[open] summary { margin-bottom: 14px; }
+
+  .checks { display: flex; flex-direction: column; gap: 10px; }
+  .checkrow { display: flex; gap: 10px; align-items: flex-start; }
+  .checkrow input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+  .checkrow label { font-weight: 400; margin: 0; }
+  .checkrow .hint { margin-top: 1px; }
+
+  .btn {
+    font: 700 1rem/1 var(--font-body); padding: 12px 18px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); white-space: nowrap;
+  }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.quiet { background: transparent; color: var(--accent); }
+  .btn.big { width: 100%; padding: 15px 18px; font-size: 1.05rem; }
+  .status { margin-top: 10px; font-size: .9rem; color: var(--muted); min-height: 1.4em; }
+  .status.danger { color: var(--danger); }
+
+  /* Print check */
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 14px; }
+  @media (max-width: 480px) { .facts { grid-template-columns: 1fr 1fr; } }
+  .facts div { min-width: 0; }
+  .facts dt { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .facts dd { margin: 2px 0 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .issue { margin: 0; padding: 9px 12px 9px 34px; border-radius: 7px; position: relative; font-size: .93rem; }
+  .issue::before { position: absolute; left: 12px; top: 9px; font-weight: 700; }
+  .issue.warn { background: var(--warn-soft); color: var(--ink); }
+  .issue.warn::before { content: "!"; color: var(--warn); left: 15px; }
+  .issue.info { background: var(--info-soft); }
+  .issue.info::before { content: "i"; color: var(--info); left: 15px; font-family: Georgia, serif; }
+  .issue.ok { background: var(--accent-soft); }
+  .issue.ok::before { content: "\2713"; color: var(--ok); }
+  .issue.danger { background: var(--warn-soft); color: var(--danger); }
+  .issue.danger::before { content: "!"; left: 15px; }
+  .muted { color: var(--muted); }
+
+  .thumbs { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; margin-top: 16px; scroll-snap-type: x proximity; }
+  .thumb { margin: 0; flex: none; width: 104px; scroll-snap-align: start; }
+  .thumb img { display: block; width: 100%; height: auto; background: #fff; border-radius: 2px; box-shadow: var(--paper-shadow); outline: 1px solid var(--line); }
+  .thumb.flagged img { outline: 2px solid var(--warn); }
+  .thumb figcaption { font-size: .78rem; color: var(--muted); margin-top: 6px; text-align: center; font-variant-numeric: tabular-nums; }
+  .thumb.flagged figcaption { color: var(--warn); font-weight: 700; }
+  .more { align-self: center; flex: none; font-size: .85rem; }
+
+  /* Results */
+  .files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .file { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--line); }
+  .file:first-child { border-top: 0; padding-top: 0; }
+  .file-info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .file-name { font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+  .file-where { font-size: .85rem; }
+  .file.primary .file-where { color: var(--ok); font-weight: 700; }
+  @media (max-width: 480px) { .file { flex-direction: column; align-items: stretch; } }
+  .copybox { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .copyrow { display: flex; gap: 8px; }
+  .copyrow input { flex: 1; min-width: 0; }
+
+  .slots { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 480px) { .slots { grid-template-columns: 1fr; } }
+  .slots li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: .9rem; }
+  .slots b { display: block; font-size: .72rem; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+
+  footer { padding-block: 0 40px; color: var(--muted); font-size: .85rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+      </span>
+      <h1>TPT Packager</h1>
+    </div>
+    <p class="lede">Turn a finished printable into everything a Teachers Pay Teachers listing needs: a print-ready PDF, a watermarked preview, a Read Me First page with your terms of use, and one ZIP to upload.</p>
+    <p class="private">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Nothing is stored. Files you drop in never leave this device.
+    </p>
+  </header>
+
+  <main class="grid">
+    <div class="col">
+      <section class="panel">
+        <div class="panel-head"><span class="step">1</span><h2>Add your product</h2></div>
+        <div class="stack">
+          <div>
+            <label for="googleLink">Google Docs or Slides link</label>
+            <div class="copyrow">
+              <input type="url" id="googleLink" placeholder="https://docs.google.com/document/d/…/edit" autocomplete="off">
+              <button type="button" class="btn" id="importBtn">Get file</button>
+            </div>
+            <div class="hint" id="googleLinkHint"></div>
+            <div class="import-status" id="importStatus" role="status" hidden></div>
+            <div class="checkrow" style="margin-top:12px">
+              <input type="checkbox" id="giveCopyLink" checked>
+              <div><label for="giveCopyLink">Give buyers a "make a copy" link to this file</label><div class="hint">Printed on the Read Me First page, so each buyer edits their own copy.</div></div>
+            </div>
+          </div>
+          <div class="or" aria-hidden="true"><span>or upload the files</span></div>
+          <div>
+            <span class="label">Printable PDF</span>
+            <div class="drop" id="pdfDrop">
+              <svg class="icon" viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h19l9 9v27H3z"/><path d="M22 3v9h9"/><path d="M9 22h16M9 28h16M9 34h10"/></svg>
+              <div>
+                <strong>Drop your PDF here or click to choose<span class="tag" id="sampleTag" hidden>Sample</span></strong>
+                <span class="sub" id="pdfName">From Canva, Word or anywhere else that saves a PDF</span>
+              </div>
+              <input type="file" id="pdfInput" accept="application/pdf,.pdf" aria-label="Choose your printable PDF">
+            </div>
+          </div>
+          <div>
+            <span class="label">Editable Word file</span>
+            <div class="drop" id="docxDrop">
+              <svg class="icon" viewBox="0 0 34 42" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h19l9 9v27H3z"/><path d="M22 3v9h9"/><path d="M9 21l3 12 5-9 5 9 3-12"/></svg>
+              <div>
+                <strong>Drop a .docx here or click to choose</strong>
+                <span class="sub" id="docxName"></span>
+                <button type="button" class="linkbtn" id="docxClear" hidden>Remove</button>
+              </div>
+              <input type="file" id="docxInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Choose your editable Word file">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="step">2</span><h2>Name and format</h2></div>
+        <div class="stack">
+          <div>
+            <label for="productName">Product name</label>
+            <input type="text" id="productName" autocomplete="off">
+          </div>
+          <div class="row2">
+            <div>
+              <label for="pageSize">Paper size</label>
+              <select id="pageSize">
+                <option value="LETTER">US Letter (8.5 × 11 in)</option>
+                <option value="A4">A4 (210 × 297 mm)</option>
+                <option value="KEEP">Keep the PDF's size</option>
+              </select>
+            </div>
+            <div>
+              <label for="previewPages">Pages in the preview</label>
+              <select id="previewPages">
+                <option value="3">First 3 pages</option>
+                <option value="5" selected>First 5 pages</option>
+                <option value="10">First 10 pages</option>
+                <option value="0">All pages</option>
+              </select>
+            </div>
+          </div>
+          <div class="checks">
+            <div class="checkrow"><input type="checkbox" id="outReadMe" checked><div><label for="outReadMe">Read Me First page</label><div class="hint">Thank-you note, editable link, terms of use and your store link.</div></div></div>
+            <div class="checkrow"><input type="checkbox" id="outPreview" checked><div><label for="outPreview">Watermarked preview PDF</label><div class="hint">"PREVIEW" stamped on every page, for TPT's preview slot.</div></div></div>
+            <div class="checkrow"><input type="checkbox" id="outZip" checked><div><label for="outZip">TPT upload ZIP</label><div class="hint">The printable, Word file and Read Me together. The preview stays out.</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <details class="shop" id="shopDetails">
+          <summary><span class="panel-head" style="margin:0"><span class="step">3</span><h2>Your shop</h2></span></summary>
+          <div class="stack">
+            <div class="row2">
+              <div>
+                <label for="shopName">Shop name</label>
+                <input type="text" id="shopName" placeholder="Bright Minds Classroom" autocomplete="organization">
+              </div>
+              <div>
+                <label for="storeUrl">Store link</label>
+                <input type="url" id="storeUrl" placeholder="https://www.teacherspayteachers.com/store/…">
+              </div>
+            </div>
+            <div>
+              <label for="thankYou">Thank-you note</label>
+              <textarea id="thankYou" style="min-height:80px"></textarea>
+            </div>
+            <div>
+              <label for="terms">Terms of use</label>
+              <textarea id="terms"></textarea>
+              <button type="button" class="linkbtn" id="resetTerms">Reset to the standard single-classroom terms</button>
+            </div>
+            <p class="hint" style="margin:0">Saved in this browser, so you only enter these once.</p>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-live="polite">
+        <div class="panel-head"><h2>Print check</h2></div>
+        <div id="checkBody"><p class="muted">Add a PDF to check page size, margins, links and blank pages.</p></div>
+        <div class="thumbs" id="thumbs"></div>
+      </section>
+
+      <section class="panel">
+        <button type="button" class="btn big" id="build" disabled>Build TPT package</button>
+        <div class="status" id="status" role="status"></div>
+
+        <div id="result" hidden>
+          <h3 style="font-size:1.05rem;margin:6px 0 12px">Your files</h3>
+          <ul class="files" id="fileList"></ul>
+          <div class="copybox" id="copyBox" hidden>
+            <label for="copyUrl">Make-a-copy link for buyers</label>
+            <div class="copyrow">
+              <input type="text" id="copyUrl" readonly>
+              <button type="button" class="btn quiet" id="copyBtn">Copy</button>
+            </div>
+            <div class="hint">It is already printed on the Read Me First page.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Where each file goes on TPT</h2></div>
+        <ul class="slots">
+          <li><b>Digital product file</b>The TPT upload ZIP</li>
+          <li><b>Preview file</b>The watermarked preview PDF</li>
+          <li><b>Thumbnails</b>Screenshots of your best pages, made separately</li>
+          <li><b>Description</b>Mention the editable Google and Word versions</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    TPT Packager works on PDFs exported from Google Docs, Word, Canva or any other tool. It isn't affiliated with Teachers Pay Teachers.
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="lib/core.js"></script>
+<script src="lib/packager.js"></script>
+<script src="app.js"></script>

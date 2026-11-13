@@ -1,12 +1,17 @@
 {
   "name": "tpt-packager",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Google Docs add-on that turns a Google Doc into a TPT-ready bundle: print-ready PDF, editable versions, preview and ZIP.",
+  "description": "Website that turns a finished printable PDF into a TPT-ready bundle: print-ready PDF, watermarked preview, Read Me First page and upload ZIP.",
   "scripts": {
-    "test": "node --test test/*.test.js",
-    "push": "clasp push",
-    "open": "clasp open"
+    "test": "node --test test/*.test.js test/*.test.mjs",
+    "start": "python3 -m http.server 8080 --directory site",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "jszip": "3.10.1",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "3.11.174"
   },
   "license": "MIT"
 }
